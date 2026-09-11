@@ -1,0 +1,6 @@
+solver:
+  keep_files: false
+  save_duals: true
+plugins:
+  plugin_template:
+    any_setting: set_value
