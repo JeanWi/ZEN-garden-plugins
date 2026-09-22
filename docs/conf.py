@@ -12,7 +12,7 @@
 import os
 import shutil
 import sys
-from importlib.metadata import version as get_version
+from importlib.metadata import version as get_version, PackageNotFoundError
 from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(".."))
@@ -35,7 +35,12 @@ author = (
     "Jan Wiegner, "
     "Giovanni Sansavini"
 )
-release = get_version("zen_garden_plugins")
+
+# Get version from package, with fallback if not installed
+try:
+    release = get_version("zen_garden_plugins")
+except PackageNotFoundError:
+    release = "0.0.0+dev"
 language = "en"
 
 # -- General configuration ---------------------------------------------------
