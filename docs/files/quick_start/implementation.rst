@@ -1,112 +1,179 @@
 .. _implementation.implementing_plugins:
 
 ####################################
-Implementing your own plugin
+Implementing Your Own Plugin
 ####################################
 
-This page walks you through creating a plugin for ZEN-garden from scratch.
+This guide walks you through creating a plugin for ZEN-garden from scratch.
+Don't worry if you're new to Python—we'll keep it simple!
 
-There are two ways of working with plugins:
+**Two ways to develop a plugin:**
 
-- A plugin can live in this repository as a submodule. These plugins must 
-  be fully documented, have tests, and be deemed important enough for 
-  maintenance by the maintainers.
-
-- You can also create your own plugin in a separate repository and install it as a regular Python package.
-  Therefore, you can fork this repository and adapt the plugin template.
-
-In both cases the module name is the name of the plugin that needs to be added to the ZEN-garden
-configuration file (``config.json``) to activate the plugin. If you are developing a plugin, you can
-install this package in editable mode with ``pip install -e`` to see changes immediately without reinstalling.
-
-.. note::
-
-   Plugins are intentionally kept separate from ZEN-garden. You should never need
-   to modify ZEN-garden itself to add a plugin, unless you need a new event that does not
-   exist yet.
+1. **With this repository (recommended for beginners):** Fork this repository and develop your plugin here
+2. **In a separate repository:** Create your own plugin repository and install it as a Python package
 
 
-Step 1 — Create a repository
--------------------------------
+Getting started
+---------------
 
-Fork the ZEN-garden plugin template `repository on GitHub
-<https://github.com/ZEN-universe/ZEN-garden-plugins>`_. You can copy-paste the ``plugin_template/`` directory,
-rename it and start developing your own plugin.
+**Fork the template**
 
-All plugin logic goes into ``plugin.py``. You can define helper modules if you like,
-but the loader only looks for ``plugin.py``.
+Start by using the ``plugin_template/`` directory:
+
+1. Fork this repository on GitHub
+2. Copy ``plugin_template/`` and rename it (e.g., ``my_awesome_plugin/``)
+3. Edit the files inside
+
+**Key files in your plugin:**
+
+- ``plugin.py`` — Your plugin's main code (required!)
+- ``pyproject.toml`` — Package information
+- ``tests/`` — Tests for your plugin
+- ``docs/`` — Documentation
 
 
-Step 2 — Adapt ``pyproject.toml``
-----------------------------------
-
-The plugin must be a valid Python package with a ``pyproject.toml`` that advertises
-itself as a plugin for ZEN-garden. You can adapt the template's ``pyproject.toml``. Essentially you only need
-to change the name. In case your plugin relies on additional packages, you also need to specify the
-dependencies.
-
-Step 3 — Develop your plugin
+Step 1: Set up ``plugin.py``
 -----------------------------
 
-Every ``plugin.py`` must contain:
+Every ``plugin.py`` **must** have:
 
-1. A ``config`` dictionary at the top level.  ZEN-garden will fill this with the
-   settings you specify in ``config.json`` under the respective plugin name.
-2. One or more functions decorated with
-   ``@EventPublisher.register(Event.<event_name>)``.  These functions are called
-   automatically when ZEN-garden reaches the corresponding event.
-3. Testing: create a new directory ``tests/`` and add test files there.
-4. Documentation: create a new directory under ``docs/files/available_plugins`` and add your
-   documentation there. You can adapt the template's documentation.
+1. **A `Config` class** with default settings:
 
-Install the plugin package into the same Python environment as ZEN-garden:
+   .. code-block:: python
+
+       from zen_garden import ConfigBase
+
+       class Config(ConfigBase):
+           """Configuration for my plugin."""
+           my_setting: str = "default_value"
+
+2. **One or more functions** decorated with ``@EventPublisher.register``:
+
+   .. code-block:: python
+
+       from zen_garden import Event, EventPublisher
+
+       @EventPublisher.register(Event.after_model_schema_creation)
+       def my_plugin_logic(model_schema):
+           """This runs at a specific point in ZEN-garden's workflow."""
+           # Your code goes here!
+           pass
+
+**How it works:**
+
+- ZEN-garden has a workflow with specific points where plugins can "hook in"
+- Each hook is an "event" (e.g., ``after_model_schema_creation``)
+- Your function is called automatically when ZEN-garden reaches that event
+- ZEN-garden passes relevant objects to your function (e.g., the model schema)
+
+**Available events:**
+
+See ``zen_garden.plugin_system.events.Event`` for all available events. Common ones:
+
+- ``after_model_schema_creation`` — After the model structure is built
+- ``before_optimization`` — Just before optimization starts
+- ``after_optimization`` — After optimization completes
+
+Each event passes specific keyword arguments. Check the ZEN-garden source or docstrings
+to see what each event provides.
+
+
+Step 2: Access your configuration
+----------------------------------
+
+Inside your plugin function, access the settings passed from ZEN-garden:
+
+.. code-block:: python
+
+    @EventPublisher.register(Event.after_model_schema_creation)
+    def my_plugin_logic(model_schema):
+        # Get your plugin's config from ZEN-garden
+        config = model_schema.config.plugins["my_plugin"]
+        my_value = config["my_setting"]
+        print(f"Using setting: {my_value}")
+
+
+Step 3: Update ``pyproject.toml``
+----------------------------------
+
+Tell Python that your plugin is a ZEN-garden plugin:
+
+.. code-block:: toml
+
+    [project]
+    name = "zen_garden_my_plugin"
+    version = "0.1.0"
+    description = "My awesome ZEN-garden plugin"
+
+    [project.entry-points."zen_garden.plugins"]
+    my_plugin = "zen_garden_plugins.my_plugin"
+
+The entry point name (``my_plugin``) is what users write in their ``config.yaml``.
+
+
+Step 4: Test your plugin
+------------------------
+
+Create a ``tests/`` directory with tests:
+
+.. code-block:: python
+
+    # tests/test_my_plugin.py
+    import pytest
+    from zen_garden_plugins.my_plugin.plugin import Config
+
+    def test_config_has_defaults():
+        config = Config()
+        assert config.my_setting == "default_value"
+
+
+Step 5: Document your plugin
+-----------------------------
+
+Create ``docs/files/available_plugins/my_plugin/`` with:
+
+- ``my_plugin.rst`` — Overview and usage guide
+- Any other documentation users need
+
+See ``template_plugin.rst`` for an example.
+
+
+Step 6: Install and test
+------------------------
+
+Test locally by installing in editable mode:
 
 .. code-block:: shell
 
-    pip install -e path/to/my_plugin
+    pip install -e .
 
-The ``-e`` flag installs it in *editable* mode, which means changes to your files
-take effect immediately without reinstalling.
+This lets you test changes immediately without reinstalling.
 
 
-Available events
-~~~~~~~~~~~~~~~~
+Step 7: Configure in ZEN-garden
+-------------------------------
 
-Events are defined in ``zen_garden.plugin_system.events.Event``.
-Each event corresponds to a specific point in the workflow and passes relevant
-objects as keyword arguments. Refer to the ZEN-garden documentation or source code
-for the list of available events and their arguments.
+Users activate your plugin in their ``config.yaml``:
 
-Step 5 — Activate in ``config.json``
---------------------------------------
+.. code-block:: yaml
 
-Add the plugin's name to the ZEN-garden ``config.json``:
+    plugins:
+      my_plugin:
+        my_setting: "custom_value"
 
-.. code-block:: json
+That's it! ZEN-garden will:
 
-    {
-        "plugins": {
-            "my_plugin_name": {
-                "my_setting": 123
-            }
-        }
-    }
+1. Find your installed plugin
+2. Load your ``Config`` with the custom value
+3. Call your decorated functions at the right times
 
-The dictionary under ``"my_plugin_name"`` is merged into the plugin's ``config``
-before any of its functions are called.  Use it to pass numerical parameters,
-file paths, flags, and so on.
 
-You can see the template plugin's documentation here: :ref:`available_plugins.template_plugin`.
+See the template plugin
+-----------------------
 
-How the loader works
----------------------
+The template plugin in this repository is a working example. Look at:
 
-When ZEN-garden starts, the loader scans all installed packages for entry points
-in the ``zen_garden.plugins`` group.  For each plugin listed in ``config.json`` it:
+- ``zen_garden_plugins/plugin_template/plugin.py`` — Simple example code
+- ``docs/files/available_plugins/template_plugin/`` — Example documentation
 
-1. Locates the installed entry point with that name.
-2. Imports the corresponding ``plugin.py`` module.
-3. Merges the user-provided settings into the module's ``config`` dictionary.
-
-If a plugin name appears in ``config.json`` but is not installed, ZEN-garden raises
-a ``ModuleNotFoundError`` with a clear message listing the available plugins.
+Use it as a reference when building your own plugin!
