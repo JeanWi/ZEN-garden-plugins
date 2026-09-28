@@ -1,0 +1,4 @@
+,natural_gas_boiler,natural_gas_storage,natural_gas_pipeline
+natural_gas_boiler,1,0.5,0.2
+natural_gas_storage,0.5,1,0.3
+natural_gas_pipeline,0.2,0.3,1
