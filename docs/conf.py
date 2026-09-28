@@ -12,7 +12,8 @@
 import os
 import shutil
 import sys
-from importlib.metadata import version as get_version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as get_version
 from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(".."))

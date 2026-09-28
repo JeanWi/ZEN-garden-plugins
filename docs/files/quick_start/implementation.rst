@@ -127,7 +127,7 @@ Install the plugin package into the same Python environment as ZEN-garden:
 
 .. code-block:: shell
 
-    pip install -e path/to/plugin_repository
+     uv pip install -e path/to/plugin_repository --no-deps
 
 The ``-e`` flag installs it in *editable* mode, which means changes to your files
 take effect immediately without reinstalling.
