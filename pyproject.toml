@@ -23,6 +23,7 @@ dependencies = [
 
 [project.entry-points."zen_garden.plugins"]
 plugin_template = "zen_garden_plugins.plugin_template.plugin"
+mean_variance_optimization = "zen_garden_plugins.mean_variance_optimization.plugin"
 
 [project.optional-dependencies]
 
