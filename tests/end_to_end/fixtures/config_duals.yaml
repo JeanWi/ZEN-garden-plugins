@@ -1,0 +1,7 @@
+solver:
+  keep_files: false
+  save_duals: true
+plugins:
+  plugin_template:
+    example_setting: set_value
+    example_number: 42

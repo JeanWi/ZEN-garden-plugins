@@ -6,9 +6,9 @@
 
 .. _index.intro:
 
-################################################################
-ZEN-galaxies: Zero emissions Energy Networks Plugin Template
-################################################################
+##################################################################
+ZEN-garden-plugins: Zero emissions Energy Networks Plugin Template
+##################################################################
 
 
 .. _doc_overview:
@@ -28,14 +28,13 @@ Documentation
  
 .. toctree::
    :maxdepth: 1
-   :caption: Quick Start
+   :caption: Implementing a Plugin
 
-   files/quick_start/installation
    files/quick_start/implementation
 
 .. toctree::
    :maxdepth: 1
-   :caption: Available Plugins
+   :caption: Plugin Documentation
    :glob:
 
    files/available_plugins/*/*
