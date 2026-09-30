@@ -38,7 +38,7 @@ in ``pyproject.toml``:
 
     [project.entry-points."zen_garden.plugins"]
     plugin_template = "zen_garden_plugins.plugin_template.plugin"
-    my_awesome_plugin = "zen_garden_plugins.my_awesome_plugin"
+    my_awesome_plugin = "zen_garden_plugins.my_awesome_plugin.plugin"
 
 The entry point name (``my_awesome_plugin``) is what users write in the ZEN garden
 ``config.yaml``.
