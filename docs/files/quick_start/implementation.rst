@@ -132,6 +132,10 @@ Install the plugin package into the same Python environment as ZEN-garden:
 The ``-e`` flag installs it in *editable* mode, which means changes to your files
 take effect immediately without reinstalling.
 
+.. warning::
+    If you change the pyproject.toml or add new dependencies, you must reinstall
+    the plugin.
+
 Activate your plugin in their ``config.yaml``:
 
 .. code-block:: yaml
