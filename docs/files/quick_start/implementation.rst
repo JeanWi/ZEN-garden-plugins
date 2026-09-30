@@ -17,7 +17,6 @@ your own plugin.
 - ``docs/files/available_plugins/template_plugin/`` — Example documentation
 - ``tests/plugin_template/test_plugin.py`` — Example test implementation
 
-
 **Copy ``plugin_template/``** and rename it (e.g., ``my_awesome_plugin/``).
 
 The following three locations are important for your plugin:
@@ -25,6 +24,8 @@ The following three locations are important for your plugin:
 - ``zen_garden_plugins/my_awesome_plugin/plugin.py`` — Your plugin code
 - ``docs/files/available_plugins/my_awesome_plugin/`` — Your plugin documentation
 - ``tests/my_awesome_plugin/test_my_awesome_plugin.py`` — Your plugin tests
+- ``pyproject.toml`` — Place to register your plugin so that ZEN-garden sees it
+
 
 
 ####################################
@@ -132,12 +133,12 @@ Install the plugin package into the same Python environment as ZEN-garden:
 The ``-e`` flag installs it in *editable* mode, which means changes to your files
 take effect immediately without reinstalling.
 
-Activate your plugin in their ``config.yaml``:
+Activate your plugin in their ``config.yaml`` file of ZEN-garden:
 
 .. code-block:: yaml
 
     plugins:
-      my_plugin:
+      my_awesome_plugin:
         my_setting: "custom_value"
 
 That's it! ZEN-garden will:
