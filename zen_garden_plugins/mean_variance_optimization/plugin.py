@@ -38,7 +38,8 @@ from zen_garden_plugins.mean_variance_optimization.variance_term import (
 )
 
 PLUGIN_NAME = "mean_variance_optimization"
-
+# Built optimization steps are kept in this list
+BUILT_OPTIMIZATION_STEP = []
 
 class Config(ConfigBase):
     """Settings under ``plugins.mean_variance_optimization`` in the config file.
@@ -88,6 +89,10 @@ class Config(ConfigBase):
                              " 'regularization_factor'.")
         return self
 
+
+@EventPublisher.register(Event.after_model_construction)
+def keep_built_model(optimization_step) -> None:
+    BUILT_OPTIMIZATION_STEP.append(optimization_step)
 
 @EventPublisher.register(Event.after_model_construction)
 def construct_mean_variance_objective(optimization_step) -> None:
