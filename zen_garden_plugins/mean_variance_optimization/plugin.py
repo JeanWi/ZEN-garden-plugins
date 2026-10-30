@@ -24,15 +24,13 @@ from typing import Literal
 from pydantic import model_validator
 from zen_garden import ConfigBase, Event, EventPublisher
 
-from zen_garden_plugins.mean_variance_optimization.reporting import (
+from zen_garden_plugins.mean_variance_optimization.helpers.reporting import (
     write_mean_variance_report,
 )
-from zen_garden_plugins.mean_variance_optimization.variance_sources import (
-    IMPORTS,
-    TECHNOLOGY_CAPEX,
+from zen_garden_plugins.mean_variance_optimization.helpers.variance_sources import (
     create_variance_sources,
 )
-from zen_garden_plugins.mean_variance_optimization.variance_term import (
+from zen_garden_plugins.mean_variance_optimization.helpers.variance_term import (
     add_weighted_sd_sum,
     quadratic_variance,
 )
@@ -155,7 +153,6 @@ def report_mean_variance(postprocessing) -> None:
 
 def _build_variance(optimization_model, time_steps, settings):
     """Return the variance of the NPC summed over all variance sources."""
-    # Todo: understand
     variance = 0
     for source in create_variance_sources(optimization_model, time_steps, settings):
         weighted_sd_sum = add_weighted_sd_sum(optimization_model, source)
