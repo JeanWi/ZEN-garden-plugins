@@ -43,12 +43,16 @@ def write_mean_variance_report(postprocessing, settings: dict) -> None:
         contributions.groupby("source")["variance_contribution"].sum().to_dict()
     )
     variance = float(sum(variance_per_source.values()))
+    variance_from_objective = (float(lp_model.objective.value) - float(
+            lp_model.variables["net_present_cost"].solution.sum("set_years")
+        ))/settings["weighting_factor"]
 
     report = {
         "mean_npc": float(
             lp_model.variables["net_present_cost"].solution.sum("set_years")
         ),
         "variance": variance,
+        "variance_from_objective_validation": variance_from_objective,
         "standard_deviation": variance**0.5,
         "variance_per_source": variance_per_source,
         "objective_value": float(lp_model.objective.value),

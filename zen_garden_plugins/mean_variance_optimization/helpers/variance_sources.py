@@ -118,6 +118,9 @@ def create_technology_capex_source(
         * capex_npv_weight(optimization_model)
     )
     absolute_sd = _align_to_variable(absolute_sd, capacity_addition)
+
+    df = absolute_sd.to_dataframe("absolute_sd")
+    df.to_csv(folder/"absolute_sd_for_validation.csv")
     return _create_source(
         TECHNOLOGY_CAPEX,
         "capacity_addition",

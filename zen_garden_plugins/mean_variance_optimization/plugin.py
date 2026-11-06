@@ -154,7 +154,8 @@ def report_mean_variance(postprocessing) -> None:
 def _build_variance(optimization_model, time_steps, settings):
     """Return the variance of the NPC summed over all variance sources."""
     variance = 0
-    for source in create_variance_sources(optimization_model, time_steps, settings):
+    variance_sources = create_variance_sources(optimization_model, time_steps, settings)
+    for source in variance_sources:
         weighted_sd_sum = add_weighted_sd_sum(optimization_model, source)
         variance += quadratic_variance(
             weighted_sd_sum, source, settings["include_correlation"]

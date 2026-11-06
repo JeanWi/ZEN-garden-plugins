@@ -40,7 +40,7 @@ def add_weighted_sd_sum(optimization_model, source: VarianceSource) -> linopy.Va
     optimization_model.variables.units[name] = None
     weighted_sd_sum = lp_model.variables[name]
 
-    # Decision variable is capacity_addtion or import
+    # Decision variable is capacity_addition or import
     decision_variable = optimization_model.variables[source.decision_variable]
     decision_variable = decision_variable.sel({source.element_dimension: elements})
     sum_of_sd_times_x = (source.absolute_sd * decision_variable).sum(
