@@ -15,13 +15,30 @@ coefficient is::
 where ``npv_weight`` applies the same annuity and discounting as ZEN-garden
 (see ``discounting.py``).
 
-Correlation assumption: the correlation matrix is given per element
-(technology or carrier). All entries of the same element (all locations,
-years, capacity types or time steps) are assumed to be perfectly correlated
-(ρ = 1). They can therefore be combined exactly into one weighted sum per
-element, ``y_e = Σ_{i of e} σ_i · x_i``, and the variance of the NPC is::
+Correlation assumption: the correlation matrix ``R`` is given per element
+(technology or carrier), and the spatial correlation ``ρ_s[e]`` per element.
+The cost of entry ``i`` (element ``e``, location ``l``) is split into a part
+that is common to all locations and a local part::
 
-    Var = Σ_e Σ_e' R[e, e'] · y_e · y_e'
+    c_{e,l} = √ρ_s[e] · Z_e + √(1 - ρ_s[e]) · ε_{e,l}
+
+where ``Z`` and, at every location, ``ε_{·,l}`` have the correlation ``R``,
+and ``ε`` is independent between locations. The correlation of two entries is
+therefore::
+
+    corr((e, l), (e', l')) = R[e, e'] · (√(ρ_s[e] ρ_s[e']) + δ_{l l'} √((1 - ρ_s[e])(1 - ρ_s[e'])))
+
+i.e. ``R`` at the same location and ``ρ_s[e]`` for one element at two
+locations. This matrix is positive semi-definite for any ``ρ_s`` in [0, 1].
+All entries of the same element and location (years, capacity types, time
+steps) are perfectly correlated. They can therefore be combined exactly into
+the weighted sums ``y_e = Σ_{i of e} σ_i · x_i`` and
+``z_{e,l} = Σ_{i of e at l} σ_i · x_i``, and the variance of the NPC is::
+
+    Var = Σ_e Σ_e' R[e, e'] · √(ρ_s[e] ρ_s[e']) · y_e · y_e'
+        + Σ_l Σ_e Σ_e' R[e, e'] · √((1 - ρ_s[e])(1 - ρ_s[e'])) · z_{e,l} · z_{e',l}
+
+With ``ρ_s = 1`` (the default) only the first term remains.
 """
 
 from dataclasses import dataclass
@@ -37,10 +54,13 @@ from zen_garden_plugins.mean_variance_optimization.helpers.read_data import (
     get_input_folder,
     read_correlation_matrix,
     read_relative_sd,
+    read_spatial_correlation,
 )
 
 TECHNOLOGY_CAPEX = "technology_capex"
 IMPORTS = "imports"
+#: Possible names of the location dimension of a decision variable.
+LOCATION_DIMENSIONS = ("set_location", "set_nodes", "set_edges")
 
 
 @dataclass
@@ -56,6 +76,8 @@ class VarianceSource:
         absolute_sd: Absolute standard deviation ``σ`` of the NPC coefficient
             of every entry of ``x`` (same dimensions as ``x``).
         correlation: Correlation matrix of the uncertain elements.
+        spatial_correlation: Spatial correlation ``ρ_s`` of the uncertain
+            elements (correlation of one element between two locations).
     """
 
     name: str
@@ -63,6 +85,7 @@ class VarianceSource:
     element_dimension: str
     absolute_sd: xr.DataArray
     correlation: pd.DataFrame
+    spatial_correlation: pd.Series
 
     @property
     def weighted_sum_variable(self) -> str:
@@ -70,14 +93,43 @@ class VarianceSource:
         return f"{self.decision_variable}_weighted_sd_sum"
 
     @property
+    def local_weighted_sum_variable(self) -> str:
+        """Name of the auxiliary variable ``z_{e,l} = Σ_{i of e at l} σ_i · x_i``."""
+        return f"{self.decision_variable}_weighted_sd_sum_per_location"
+
+    @property
     def uncertain_elements(self) -> list[str]:
         """Elements with a nonzero standard deviation."""
         return list(self.correlation.index)
 
     @property
+    def local_elements(self) -> list[str]:
+        """Uncertain elements that are not perfectly correlated in space."""
+        return list(self.spatial_correlation.index[self.spatial_correlation < 1])
+
+    @property
     def summed_dimensions(self) -> list[str]:
         """Dimensions of ``x`` that are summed up in the weighted sum."""
         return [dim for dim in self.absolute_sd.dims if dim != self.element_dimension]
+
+    @property
+    def location_dimension(self) -> str:
+        """Dimension of ``x`` that holds the locations (nodes or edges)."""
+        for dim in self.absolute_sd.dims:
+            if dim in LOCATION_DIMENSIONS:
+                return dim
+        raise ValueError(
+            f"{self.decision_variable} has no location dimension "
+            f"({', '.join(LOCATION_DIMENSIONS)}), so no spatial correlation "
+            "can be used."
+        )
+
+    @property
+    def summed_dimensions_per_location(self) -> list[str]:
+        """Dimensions of ``x`` that are summed up in the weighted sum per location."""
+        return [
+            dim for dim in self.summed_dimensions if dim != self.location_dimension
+        ]
 
 
 def create_variance_sources(
@@ -125,6 +177,7 @@ def create_technology_capex_source(
         TECHNOLOGY_CAPEX,
         "capacity_addition",
         "set_technologies",
+        "technology",
         absolute_sd,
         folder,
         settings,
@@ -152,14 +205,26 @@ def create_import_price_source(
     )
     absolute_sd = _align_to_variable(absolute_sd, flow_import)
     return _create_source(
-        IMPORTS, "flow_import", "set_carriers", absolute_sd, folder, settings
+        IMPORTS,
+        "flow_import",
+        "set_carriers",
+        "carrier",
+        absolute_sd,
+        folder,
+        settings,
     )
 
 
 def _create_source(
-    name, decision_variable, element_dimension, absolute_sd, folder, settings
+    name,
+    decision_variable,
+    element_dimension,
+    element_column,
+    absolute_sd,
+    folder,
+    settings,
 ) -> VarianceSource:
-    """Keep only uncertain elements and read their correlation matrix."""
+    """Keep only uncertain elements and read their (spatial) correlation."""
     summed_dimensions = [dim for dim in absolute_sd.dims if dim != element_dimension]
     is_uncertain = (absolute_sd != 0).any(summed_dimensions)
     uncertain_elements = list(
@@ -169,12 +234,16 @@ def _create_source(
     correlation = read_correlation_matrix(
         folder, uncertain_elements, settings["correlation_regularization"]
     )
+    spatial_correlation = read_spatial_correlation(
+        folder, element_column, uncertain_elements
+    )
     return VarianceSource(
         name=name,
         decision_variable=decision_variable,
         element_dimension=element_dimension,
         absolute_sd=absolute_sd.sel({element_dimension: uncertain_elements}),
         correlation=correlation,
+        spatial_correlation=spatial_correlation,
     )
 
 

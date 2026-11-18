@@ -31,6 +31,7 @@ from zen_garden_plugins.mean_variance_optimization.helpers.variance_sources impo
     create_variance_sources,
 )
 from zen_garden_plugins.mean_variance_optimization.helpers.variance_term import (
+    add_local_weighted_sd_sum,
     add_weighted_sd_sum,
     quadratic_variance,
 )
@@ -157,8 +158,12 @@ def _build_variance(optimization_model, time_steps, settings):
     variance_sources = create_variance_sources(optimization_model, time_steps, settings)
     for source in variance_sources:
         weighted_sd_sum = add_weighted_sd_sum(optimization_model, source)
+        local_weighted_sd_sum = add_local_weighted_sd_sum(optimization_model, source)
         variance += quadratic_variance(
-            weighted_sd_sum, source, settings["include_correlation"]
+            weighted_sd_sum,
+            local_weighted_sd_sum,
+            source,
+            settings["include_correlation"],
         )
     return variance
 

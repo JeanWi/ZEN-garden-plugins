@@ -9,8 +9,12 @@ The files are written by ZEN-Europe into the dataset folder::
     <dataset>/mean_variance/<source>/correlation.csv
         Square matrix. Row and column labels are element names; empty cells
         are read as 0.
+    <dataset>/mean_variance/<source>/spatial_correlation.csv  (optional)
+        Columns ``<element>, spatial_correlation``. Correlation of the cost of
+        one element between two different locations, between 0 and 1. If the
+        file does not exist, all elements have a spatial correlation of 1.
 
-Every element of the model must appear in both files. Elements in the files
+Every element of the model must appear in all files. Elements in the files
 that are not part of the model are ignored.
 """
 
@@ -59,6 +63,43 @@ def read_relative_sd(
         negative = list(relative_sd.index[relative_sd < 0])
         raise ValueError(f"{path} has negative relative_sd values for {negative}.")
     return relative_sd
+
+
+def read_spatial_correlation(
+    folder: Path, element_column: str, model_elements: list[str]
+) -> pd.Series:
+    """Read the spatial correlation of every model element.
+
+    The spatial correlation ``ρ_s`` is the correlation of the cost of one
+    element between two different locations (1 = the same cost everywhere,
+    0 = independent costs at every location).
+
+    Args:
+        folder: Folder that may contain ``spatial_correlation.csv``.
+        element_column: Name of the column with the element names, e.g.
+            ``"technology"`` or ``"carrier"``.
+        model_elements: Elements of the model that need a value.
+
+    Returns:
+        Spatial correlation indexed by element, in the order of
+        ``model_elements``. All ones if the file does not exist.
+    """
+    path = folder / "spatial_correlation.csv"
+    if not path.exists():
+        return pd.Series(1.0, index=pd.Index(model_elements, dtype=object))
+    table = pd.read_csv(path, encoding="utf-8-sig")
+    spatial_correlation = table.set_index(element_column)["spatial_correlation"]
+
+    _raise_if_elements_missing(model_elements, spatial_correlation.index, path)
+    spatial_correlation = spatial_correlation.loc[model_elements].astype(float)
+
+    outside = (spatial_correlation < 0) | (spatial_correlation > 1)
+    if outside.any():
+        raise ValueError(
+            f"{path} has spatial_correlation values outside [0, 1] for "
+            f"{list(spatial_correlation.index[outside])}."
+        )
+    return spatial_correlation
 
 
 def read_correlation_matrix(
